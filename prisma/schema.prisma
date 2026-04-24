@@ -1,0 +1,93 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Product {
+  id          Int                 @id @default(autoincrement())
+  code        String              @unique
+  description String
+  unitMeasure String?
+  notes       String?
+  costPrice   Decimal             @db.Decimal(14, 2)
+  active      Boolean             @default(true)
+  categoryId  Int
+  providerId  Int
+  category    Category            @relation(fields: [categoryId], references: [id])
+  provider    Provider            @relation(fields: [providerId], references: [id])
+  stock       Stock?
+  costHistory CostUpdateHistory[]
+  movements   StockMovement[]
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@index([description])
+  @@index([categoryId])
+  @@index([providerId])
+}
+
+model Category {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Provider {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model PriceSetting {
+  id                  Int      @id @default(1)
+  wholesalePercentage Decimal  @default(0) @db.Decimal(8, 2)
+  retailPercentage    Decimal  @default(0) @db.Decimal(8, 2)
+  promo1Percentage    Decimal  @default(0) @db.Decimal(8, 2)
+  promo2Percentage    Decimal  @default(0) @db.Decimal(8, 2)
+  updatedAt           DateTime @updatedAt
+}
+
+model CostUpdateHistory {
+  id           Int       @id @default(autoincrement())
+  productId    Int
+  providerId   Int?
+  product      Product   @relation(fields: [productId], references: [id])
+  oldCostPrice Decimal   @db.Decimal(14, 2)
+  newCostPrice Decimal   @db.Decimal(14, 2)
+  sourceFile   String?
+  user         String    @default("sistema")
+  createdAt    DateTime  @default(now())
+}
+
+model Stock {
+  id              Int      @id @default(autoincrement())
+  productId       Int      @unique
+  product         Product  @relation(fields: [productId], references: [id])
+  currentQuantity Decimal  @default(0) @db.Decimal(14, 2)
+  updatedAt       DateTime @updatedAt
+}
+
+model StockMovement {
+  id               Int      @id @default(autoincrement())
+  productId         Int
+  product           Product  @relation(fields: [productId], references: [id])
+  movementType      String
+  quantity          Decimal  @db.Decimal(14, 2)
+  previousQuantity  Decimal  @db.Decimal(14, 2)
+  newQuantity       Decimal  @db.Decimal(14, 2)
+  reason            String
+  notes             String?
+  user              String   @default("sistema")
+  createdAt         DateTime @default(now())
+
+  @@index([productId])
+  @@index([createdAt])
+}
