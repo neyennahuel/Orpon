@@ -4,6 +4,14 @@ setlocal
 title Orpon Descartables
 cd /d "%~dp0"
 
+set "ORPON_DB_NAME=orpon_descartables"
+set "ORPON_DB_USER=postgres"
+set "ORPON_DB_PASSWORD=Lolita00+"
+set "ORPON_DB_PASSWORD_URL=Lolita00%%2B"
+set "ORPON_DB_HOST=localhost"
+set "ORPON_DB_PORT=5432"
+set "DATABASE_URL=postgresql://%ORPON_DB_USER%:%ORPON_DB_PASSWORD_URL%@%ORPON_DB_HOST%:%ORPON_DB_PORT%/%ORPON_DB_NAME%?schema=public"
+
 echo.
 echo ==========================================
 echo   Orpon Descartables - servidor local
@@ -28,12 +36,9 @@ if errorlevel 1 (
 if not exist ".env" (
   echo No existe .env. Creo uno desde .env.example.
   copy ".env.example" ".env" >nul
-  echo.
-  echo Revisar .env y configurar DATABASE_URL con el PostgreSQL del servidor.
-  echo Despues ejecutar este BAT de nuevo.
-  pause
-  exit /b 1
 )
+
+echo DATABASE_URL="%DATABASE_URL%" > ".env"
 
 echo Instalando dependencias...
 if exist "package-lock.json" (
@@ -58,24 +63,24 @@ if errorlevel 1 (
 
 echo.
 echo Verificando base PostgreSQL orpon_descartables...
-set "PGPASSWORD=Lolita00+"
+set "PGPASSWORD=%ORPON_DB_PASSWORD%"
 set "PSQL_EXE="
 if exist "C:\Program Files\PostgreSQL\17\bin\psql.exe" set "PSQL_EXE=C:\Program Files\PostgreSQL\17\bin\psql.exe"
 if not defined PSQL_EXE if exist "C:\Program Files\PostgreSQL\16\bin\psql.exe" set "PSQL_EXE=C:\Program Files\PostgreSQL\16\bin\psql.exe"
 if not defined PSQL_EXE if exist "C:\Program Files\PostgreSQL\15\bin\psql.exe" set "PSQL_EXE=C:\Program Files\PostgreSQL\15\bin\psql.exe"
 if not defined PSQL_EXE set "PSQL_EXE=psql"
 
-"%PSQL_EXE%" -U postgres -h localhost -p 5432 -d postgres -tc "SELECT 1 FROM pg_database WHERE datname = 'orpon_descartables';" | findstr /C:"1" >nul
+"%PSQL_EXE%" -U %ORPON_DB_USER% -h %ORPON_DB_HOST% -p %ORPON_DB_PORT% -d postgres -tc "SELECT 1 FROM pg_database WHERE datname = '%ORPON_DB_NAME%';" | findstr /C:"1" >nul
 if errorlevel 1 (
-  echo Creando base orpon_descartables...
-  "%PSQL_EXE%" -U postgres -h localhost -p 5432 -d postgres -c "CREATE DATABASE orpon_descartables;"
+  echo Creando base %ORPON_DB_NAME%...
+  "%PSQL_EXE%" -U %ORPON_DB_USER% -h %ORPON_DB_HOST% -p %ORPON_DB_PORT% -d postgres -c "CREATE DATABASE %ORPON_DB_NAME%;"
   if errorlevel 1 (
-    echo ERROR: no se pudo crear la base orpon_descartables.
+    echo ERROR: no se pudo crear la base %ORPON_DB_NAME%.
     pause
     exit /b 1
   )
 ) else (
-  echo Base orpon_descartables encontrada.
+  echo Base %ORPON_DB_NAME% encontrada.
 )
 
 echo.
