@@ -10,6 +10,8 @@ type Product = {
   id: number;
   code: string;
   description: string;
+  unitMeasure?: string | null;
+  notes?: string | null;
   category: string;
   provider: string;
   costPrice: number;
@@ -61,6 +63,7 @@ export default function Home() {
   const [baseSummary, setBaseSummary] = useState<any>(null);
   const [costPreview, setCostPreview] = useState<any>(null);
   const [costFile, setCostFile] = useState<File | null>(null);
+  const [productLookup, setProductLookup] = useState<"code" | "description" | null>(null);
   const [showExport, setShowExport] = useState<"excel" | "pdf" | null>(null);
   const [selectedColumns, setSelectedColumns] = useState<Record<string, boolean>>(
     Object.fromEntries(exportColumns.map(([key, , selected]) => [key, selected])),
@@ -192,6 +195,36 @@ export default function Home() {
       .filter((product) => !q || product.code.toLowerCase().includes(q) || product.description.toLowerCase().includes(q))
       .slice(0, 60);
   }, [products, stockSearch]);
+  const productSuggestions = useMemo(() => {
+    const query = (productLookup === "description" ? productForm.description : productForm.code).trim().toLowerCase();
+    if (!query) return [];
+    return products
+      .filter((product) => product.code.toLowerCase().includes(query) || product.description.toLowerCase().includes(query))
+      .sort((a, b) => {
+        const aCode = a.code.toLowerCase();
+        const bCode = b.code.toLowerCase();
+        const aDescription = a.description.toLowerCase();
+        const bDescription = b.description.toLowerCase();
+        const score = (product: Product, code: string, description: string) =>
+          code === query ? 0 : description === query ? 1 : code.startsWith(query) ? 2 : description.startsWith(query) ? 3 : 4;
+        return score(a, aCode, aDescription) - score(b, bCode, bDescription) || a.code.localeCompare(b.code);
+      })
+      .slice(0, 8);
+  }, [products, productForm.code, productForm.description, productLookup]);
+
+  function selectProduct(product: Product) {
+    setProductForm({
+      code: product.code,
+      description: product.description,
+      categoryName: product.category,
+      providerName: product.provider,
+      costPrice: product.costPrice,
+      unitMeasure: product.unitMeasure || "",
+      notes: product.notes || "",
+      active: product.active,
+    });
+    setProductLookup(null);
+  }
 
   function exportExcel() {
     const rows = products.map((product) => Object.fromEntries(selectedExportColumns.map(([key, label]) => [label, (product as any)[key]])));
@@ -316,8 +349,8 @@ export default function Home() {
           <section className="panel">
             <h2>Producto</h2>
             <form className="grid two" onSubmit={saveProduct}>
-              <label className="field"><span>Codigo</span><input className="input" required value={productForm.code} onChange={(e) => setProductForm({ ...productForm, code: e.target.value })} /></label>
-              <label className="field"><span>Descripcion</span><input className="input" required value={productForm.description} onChange={(e) => setProductForm({ ...productForm, description: e.target.value })} /></label>
+              <label className="field autocomplete-field"><span>Codigo</span><input className="input" required value={productForm.code} onFocus={() => setProductLookup("code")} onBlur={() => setTimeout(() => setProductLookup(null), 120)} onChange={(e) => { setProductLookup("code"); setProductForm({ ...productForm, code: e.target.value }); }} />{productLookup === "code" && <ProductSuggestions products={productSuggestions} onSelect={selectProduct} />}</label>
+              <label className="field autocomplete-field"><span>Descripcion</span><input className="input" required value={productForm.description} onFocus={() => setProductLookup("description")} onBlur={() => setTimeout(() => setProductLookup(null), 120)} onChange={(e) => { setProductLookup("description"); setProductForm({ ...productForm, description: e.target.value }); }} />{productLookup === "description" && <ProductSuggestions products={productSuggestions} onSelect={selectProduct} />}</label>
               <label className="field"><span>Categoria</span><input className="input" required list="categories" value={productForm.categoryName} onChange={(e) => setProductForm({ ...productForm, categoryName: e.target.value })} /></label>
               <label className="field"><span>Proveedor</span><input className="input" required list="providers" value={productForm.providerName} onChange={(e) => setProductForm({ ...productForm, providerName: e.target.value })} /></label>
               <label className="field"><span>Costo</span><input className="input" required type="number" min="0" step="0.01" value={productForm.costPrice} onChange={(e) => setProductForm({ ...productForm, costPrice: Number(e.target.value) })} /></label>
@@ -332,6 +365,21 @@ export default function Home() {
       </main>
       {showExport && <ExportModal selectedColumns={selectedColumns} setSelectedColumns={setSelectedColumns} onClose={() => setShowExport(null)} onConfirm={showExport === "excel" ? exportExcel : exportPdf} />}
       {toast && <div className="toast">{toast}</div>}
+    </div>
+  );
+}
+
+function ProductSuggestions({ products, onSelect }: { products: Product[]; onSelect: (product: Product) => void }) {
+  if (!products.length) return null;
+  return (
+    <div className="suggestions">
+      {products.map((product) => (
+        <button type="button" className="suggestion" key={product.id} onMouseDown={(event) => event.preventDefault()} onClick={() => onSelect(product)}>
+          <strong>{product.code}</strong>
+          <span>{product.description}</span>
+          <em>{product.category}</em>
+        </button>
+      ))}
     </div>
   );
 }
