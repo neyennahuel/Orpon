@@ -140,7 +140,11 @@ function renderSettings() {
 function renderStockSelect() {
   const el = document.getElementById("stockProduct");
   const selected = el.value;
-  el.innerHTML = '<option value="">Seleccionar</option>' + state.products.map((p) => `<option value="${p.code}" ${p.code === selected ? "selected" : ""}>${escapeHtml(p.code)} - ${escapeHtml(p.description)} (${p.stockQuantity || 0})</option>`).join("");
+  const q = String(document.getElementById("stockSearch").value || "").trim().toLowerCase();
+  const products = state.products
+    .filter((p) => !q || p.code.toLowerCase().includes(q) || p.description.toLowerCase().includes(q))
+    .slice(0, 60);
+  el.innerHTML = '<option value="">Seleccionar</option>' + products.map((p) => `<option value="${p.code}" ${p.code === selected ? "selected" : ""}>${escapeHtml(p.code)} - ${escapeHtml(p.description)} (${p.stockQuantity || 0})</option>`).join("");
 }
 
 function renderMovements() {
@@ -318,6 +322,7 @@ document.getElementById("downloadTemplate").onclick = () => {
 };
 document.getElementById("baseFile").onchange = (event) => importBase(event.target.files[0]);
 document.getElementById("costFile").onchange = (event) => previewCosts(event.target.files[0]);
+document.getElementById("stockSearch").oninput = renderStockSelect;
 document.getElementById("exportExcel").onclick = () => exportData("excel");
 document.getElementById("exportPdf").onclick = () => exportData("pdf");
 document.getElementById("saveSettings").onclick = () => {
