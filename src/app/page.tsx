@@ -67,6 +67,7 @@ export default function Home() {
   );
   const [productForm, setProductForm] = useState({ code: "", description: "", categoryName: "", providerName: "", costPrice: 0, unitMeasure: "", notes: "", active: true });
   const [stockForm, setStockForm] = useState({ productId: "", movementType: "entrada", quantity: 1, reason: "", notes: "" });
+  const [stockSearch, setStockSearch] = useState("");
   const [stockMovements, setStockMovements] = useState<any[]>([]);
 
   async function loadAll() {
@@ -185,6 +186,12 @@ export default function Home() {
   }
 
   const selectedExportColumns = useMemo(() => exportColumns.filter(([key]) => selectedColumns[key]), [selectedColumns]);
+  const stockProductOptions = useMemo(() => {
+    const q = stockSearch.trim().toLowerCase();
+    return products
+      .filter((product) => !q || product.code.toLowerCase().includes(q) || product.description.toLowerCase().includes(q))
+      .slice(0, 60);
+  }, [products, stockSearch]);
 
   function exportExcel() {
     const rows = products.map((product) => Object.fromEntries(selectedExportColumns.map(([key, label]) => [label, (product as any)[key]])));
@@ -292,7 +299,8 @@ export default function Home() {
             <section className="panel">
               <h2>Stock</h2>
               <form className="grid two" onSubmit={saveStock}>
-                <label className="field"><span>Producto</span><select className="select" value={stockForm.productId} onChange={(e) => setStockForm({ ...stockForm, productId: e.target.value })}><option value="">Seleccionar</option>{products.map((p) => <option value={p.id} key={p.id}>{p.code} - {p.description}</option>)}</select></label>
+                <label className="field"><span>Buscar producto</span><input className="input" value={stockSearch} onChange={(e) => setStockSearch(e.target.value)} placeholder="Codigo o descripcion" /></label>
+                <label className="field"><span>Producto</span><select className="select" value={stockForm.productId} onChange={(e) => setStockForm({ ...stockForm, productId: e.target.value })}><option value="">Seleccionar</option>{stockProductOptions.map((p) => <option value={p.id} key={p.id}>{p.code} - {p.description}</option>)}</select></label>
                 <label className="field"><span>Tipo</span><select className="select" value={stockForm.movementType} onChange={(e) => setStockForm({ ...stockForm, movementType: e.target.value })}><option value="entrada">Entrada</option><option value="salida">Salida</option><option value="ajuste">Ajuste</option></select></label>
                 <label className="field"><span>Cantidad</span><input className="input" type="number" min="0.01" step="0.01" value={stockForm.quantity} onChange={(e) => setStockForm({ ...stockForm, quantity: Number(e.target.value) })} /></label>
                 <label className="field"><span>Motivo</span><input className="input" value={stockForm.reason} onChange={(e) => setStockForm({ ...stockForm, reason: e.target.value })} /></label>
