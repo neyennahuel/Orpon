@@ -76,14 +76,10 @@ Columnas obligatorias:
 - `codigo_producto`
 - `descripcion`
 - `categoria`
-- `proveedor`
-- `precio_costo`
 
-Columnas opcionales:
+La carga base ignora cualquier otra columna del Excel. Esto permite pegar datos completos desde archivos de proveedores sin que el sistema los tome en cuenta en este modulo.
 
-- `unidad_medida`
-- `observaciones`
-- `activo`
+La carga base no actualiza costos. Los productos nuevos se crean con costo `0` y proveedor `Sin proveedor`; los precios se actualizan desde el modulo de costos.
 
 ## APIs REST
 

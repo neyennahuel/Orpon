@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { normalizeHeader, readWorkbook, sheetRows, parsePrice } from "@/lib/excel";
+import { normalizeHeader, readWorkbook, sheetRows } from "@/lib/excel";
 
-const required = ["codigo_producto", "descripcion", "categoria", "proveedor", "precio_costo"];
+const required = ["codigo_producto", "descripcion", "categoria"];
+const defaultProviderName = "Sin proveedor";
 
 export async function POST(request: NextRequest) {
   const form = await request.formData();
@@ -29,36 +30,27 @@ export async function POST(request: NextRequest) {
     const code = String(row[headerMap.codigo_producto] || "").trim();
     const description = String(row[headerMap.descripcion] || "").trim();
     const categoryName = String(row[headerMap.categoria] || "").trim();
-    const providerName = String(row[headerMap.proveedor] || "").trim();
-    const costPrice = parsePrice(row[headerMap.precio_costo]);
-    if (!code || !description || !categoryName || !providerName || costPrice === null) {
+    if (!code || !description || !categoryName) {
       summary.ignored++;
       summary.errors.push(`Fila ${line}: datos obligatorios invalidos`);
       continue;
     }
     const category = await prisma.category.upsert({ where: { name: categoryName }, update: {}, create: { name: categoryName } });
-    const provider = await prisma.provider.upsert({ where: { name: providerName }, update: {}, create: { name: providerName } });
     const existing = await prisma.product.findUnique({ where: { code } });
+    const provider = await prisma.provider.upsert({ where: { name: defaultProviderName }, update: {}, create: { name: defaultProviderName } });
     await prisma.product.upsert({
       where: { code },
       update: {
         description,
         categoryId: category.id,
-        providerId: provider.id,
-        costPrice,
-        unitMeasure: headerMap.unidad_medida ? String(row[headerMap.unidad_medida] || "").trim() || null : null,
-        notes: headerMap.observaciones ? String(row[headerMap.observaciones] || "").trim() || null : null,
-        active: headerMap.activo ? !["false", "0", "no", "inactivo"].includes(String(row[headerMap.activo]).toLowerCase()) : true,
       },
       create: {
         code,
         description,
         categoryId: category.id,
         providerId: provider.id,
-        costPrice,
-        unitMeasure: headerMap.unidad_medida ? String(row[headerMap.unidad_medida] || "").trim() || null : null,
-        notes: headerMap.observaciones ? String(row[headerMap.observaciones] || "").trim() || null : null,
-        active: headerMap.activo ? !["false", "0", "no", "inactivo"].includes(String(row[headerMap.activo]).toLowerCase()) : true,
+        costPrice: 0,
+        active: true,
         stock: { create: { currentQuantity: 0 } },
       },
     });

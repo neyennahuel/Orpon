@@ -42,11 +42,6 @@ export function createBaseTemplate() {
       codigo_producto: "COD-001",
       descripcion: "Vaso plastico 180cc",
       categoria: "Vasos",
-      proveedor: "Proveedor ejemplo",
-      precio_costo: 100,
-      unidad_medida: "unidad",
-      observaciones: "",
-      activo: true,
     },
   ];
   const wb = XLSX.utils.book_new();
