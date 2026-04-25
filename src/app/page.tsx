@@ -63,14 +63,17 @@ export default function Home() {
   const [baseSummary, setBaseSummary] = useState<any>(null);
   const [costPreview, setCostPreview] = useState<any>(null);
   const [costFile, setCostFile] = useState<File | null>(null);
-  const [productLookup, setProductLookup] = useState<"code" | "description" | null>(null);
+  const [stockLookup, setStockLookup] = useState<"code" | "description" | null>(null);
+  const [stockCodeSearch, setStockCodeSearch] = useState("");
+  const [stockDescriptionSearch, setStockDescriptionSearch] = useState("");
+  const [editProduct, setEditProduct] = useState<Product | null>(null);
+  const [editForm, setEditForm] = useState({ code: "", description: "", categoryName: "", providerName: "", costPrice: 0, unitMeasure: "", notes: "", active: true });
   const [showExport, setShowExport] = useState<"excel" | "pdf" | null>(null);
   const [selectedColumns, setSelectedColumns] = useState<Record<string, boolean>>(
     Object.fromEntries(exportColumns.map(([key, , selected]) => [key, selected])),
   );
   const [productForm, setProductForm] = useState({ code: "", description: "", categoryName: "", providerName: "", costPrice: 0, unitMeasure: "", notes: "", active: true });
   const [stockForm, setStockForm] = useState({ productId: "", movementType: "entrada", quantity: 1, reason: "", notes: "" });
-  const [stockSearch, setStockSearch] = useState("");
   const [stockMovements, setStockMovements] = useState<any[]>([]);
 
   async function loadAll() {
@@ -184,19 +187,15 @@ export default function Home() {
     });
     if (!res.ok) return notify((await res.json()).error || "No se pudo registrar");
     setStockForm({ productId: "", movementType: "entrada", quantity: 1, reason: "", notes: "" });
+    setStockCodeSearch("");
+    setStockDescriptionSearch("");
     notify("Movimiento registrado");
     await loadAll();
   }
 
   const selectedExportColumns = useMemo(() => exportColumns.filter(([key]) => selectedColumns[key]), [selectedColumns]);
-  const stockProductOptions = useMemo(() => {
-    const q = stockSearch.trim().toLowerCase();
-    return products
-      .filter((product) => !q || product.code.toLowerCase().includes(q) || product.description.toLowerCase().includes(q))
-      .slice(0, 60);
-  }, [products, stockSearch]);
-  const productSuggestions = useMemo(() => {
-    const query = (productLookup === "description" ? productForm.description : productForm.code).trim().toLowerCase();
+  const stockSuggestions = useMemo(() => {
+    const query = (stockLookup === "description" ? stockDescriptionSearch : stockCodeSearch).trim().toLowerCase();
     if (!query) return [];
     return products
       .filter((product) => product.code.toLowerCase().includes(query) || product.description.toLowerCase().includes(query))
@@ -210,10 +209,18 @@ export default function Home() {
         return score(a, aCode, aDescription) - score(b, bCode, bDescription) || a.code.localeCompare(b.code);
       })
       .slice(0, 8);
-  }, [products, productForm.code, productForm.description, productLookup]);
+  }, [products, stockCodeSearch, stockDescriptionSearch, stockLookup]);
 
-  function selectProduct(product: Product) {
-    setProductForm({
+  function selectStockProduct(product: Product) {
+    setStockForm({ ...stockForm, productId: String(product.id) });
+    setStockCodeSearch(product.code);
+    setStockDescriptionSearch(product.description);
+    setStockLookup(null);
+  }
+
+  function openEditProduct(product: Product) {
+    setEditProduct(product);
+    setEditForm({
       code: product.code,
       description: product.description,
       categoryName: product.category,
@@ -223,7 +230,20 @@ export default function Home() {
       notes: product.notes || "",
       active: product.active,
     });
-    setProductLookup(null);
+  }
+
+  async function saveEditedProduct(event: FormEvent) {
+    event.preventDefault();
+    if (!editProduct) return;
+    const res = await fetch(`/api/products/${editProduct.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(editForm),
+    });
+    if (!res.ok) return notify("No se pudo guardar el producto");
+    setEditProduct(null);
+    notify("Producto actualizado");
+    await loadAll();
   }
 
   function exportExcel() {
@@ -282,7 +302,7 @@ export default function Home() {
                 <button className="btn secondary" onClick={() => setShowExport("pdf")}><FileDown size={18} /> PDF</button>
               </div>
             </section>
-            <ProductList products={products} />
+            <ProductList products={products} onEdit={openEditProduct} />
           </>
         )}
 
@@ -332,8 +352,9 @@ export default function Home() {
             <section className="panel">
               <h2>Stock</h2>
               <form className="grid two" onSubmit={saveStock}>
-                <label className="field"><span>Buscar producto</span><input className="input" value={stockSearch} onChange={(e) => setStockSearch(e.target.value)} placeholder="Codigo o descripcion" /></label>
-                <label className="field"><span>Producto</span><select className="select" value={stockForm.productId} onChange={(e) => setStockForm({ ...stockForm, productId: e.target.value })}><option value="">Seleccionar</option>{stockProductOptions.map((p) => <option value={p.id} key={p.id}>{p.code} - {p.description}</option>)}</select></label>
+                <label className="field autocomplete-field"><span>Codigo</span><input className="input" value={stockCodeSearch} onFocus={() => setStockLookup("code")} onBlur={() => setTimeout(() => setStockLookup(null), 120)} onChange={(e) => { setStockLookup("code"); setStockForm({ ...stockForm, productId: "" }); setStockCodeSearch(e.target.value); }} placeholder="Buscar por codigo" />{stockLookup === "code" && <ProductSuggestions products={stockSuggestions} onSelect={selectStockProduct} />}</label>
+                <label className="field autocomplete-field"><span>Descripcion</span><input className="input" value={stockDescriptionSearch} onFocus={() => setStockLookup("description")} onBlur={() => setTimeout(() => setStockLookup(null), 120)} onChange={(e) => { setStockLookup("description"); setStockForm({ ...stockForm, productId: "" }); setStockDescriptionSearch(e.target.value); }} placeholder="Buscar por descripcion" />{stockLookup === "description" && <ProductSuggestions products={stockSuggestions} onSelect={selectStockProduct} />}</label>
+                <label className="field"><span>Categoria</span><input className="input" value={products.find((product) => String(product.id) === stockForm.productId)?.category || ""} readOnly /></label>
                 <label className="field"><span>Tipo</span><select className="select" value={stockForm.movementType} onChange={(e) => setStockForm({ ...stockForm, movementType: e.target.value })}><option value="entrada">Entrada</option><option value="salida">Salida</option><option value="ajuste">Ajuste</option></select></label>
                 <label className="field"><span>Cantidad</span><input className="input" type="number" min="0.01" step="0.01" value={stockForm.quantity} onChange={(e) => setStockForm({ ...stockForm, quantity: Number(e.target.value) })} /></label>
                 <label className="field"><span>Motivo</span><input className="input" value={stockForm.reason} onChange={(e) => setStockForm({ ...stockForm, reason: e.target.value })} /></label>
@@ -349,8 +370,8 @@ export default function Home() {
           <section className="panel">
             <h2>Producto</h2>
             <form className="grid two" onSubmit={saveProduct}>
-              <label className="field autocomplete-field"><span>Codigo</span><input className="input" required value={productForm.code} onFocus={() => setProductLookup("code")} onBlur={() => setTimeout(() => setProductLookup(null), 120)} onChange={(e) => { setProductLookup("code"); setProductForm({ ...productForm, code: e.target.value }); }} />{productLookup === "code" && <ProductSuggestions products={productSuggestions} onSelect={selectProduct} />}</label>
-              <label className="field autocomplete-field"><span>Descripcion</span><input className="input" required value={productForm.description} onFocus={() => setProductLookup("description")} onBlur={() => setTimeout(() => setProductLookup(null), 120)} onChange={(e) => { setProductLookup("description"); setProductForm({ ...productForm, description: e.target.value }); }} />{productLookup === "description" && <ProductSuggestions products={productSuggestions} onSelect={selectProduct} />}</label>
+              <label className="field"><span>Codigo</span><input className="input" required value={productForm.code} onChange={(e) => setProductForm({ ...productForm, code: e.target.value })} /></label>
+              <label className="field"><span>Descripcion</span><input className="input" required value={productForm.description} onChange={(e) => setProductForm({ ...productForm, description: e.target.value })} /></label>
               <label className="field"><span>Categoria</span><input className="input" required list="categories" value={productForm.categoryName} onChange={(e) => setProductForm({ ...productForm, categoryName: e.target.value })} /></label>
               <label className="field"><span>Proveedor</span><input className="input" required list="providers" value={productForm.providerName} onChange={(e) => setProductForm({ ...productForm, providerName: e.target.value })} /></label>
               <label className="field"><span>Costo</span><input className="input" required type="number" min="0" step="0.01" value={productForm.costPrice} onChange={(e) => setProductForm({ ...productForm, costPrice: Number(e.target.value) })} /></label>
@@ -364,6 +385,7 @@ export default function Home() {
         )}
       </main>
       {showExport && <ExportModal selectedColumns={selectedColumns} setSelectedColumns={setSelectedColumns} onClose={() => setShowExport(null)} onConfirm={showExport === "excel" ? exportExcel : exportPdf} />}
+      {editProduct && <EditProductModal form={editForm} setForm={setEditForm} onClose={() => setEditProduct(null)} onSave={saveEditedProduct} />}
       {toast && <div className="toast">{toast}</div>}
     </div>
   );
@@ -384,7 +406,7 @@ function ProductSuggestions({ products, onSelect }: { products: Product[]; onSel
   );
 }
 
-function ProductList({ products }: { products: Product[] }) {
+function ProductList({ products, onEdit }: { products: Product[]; onEdit: (product: Product) => void }) {
   return (
     <section className="panel">
       <div className="mobile-only mobile-list">
@@ -397,13 +419,37 @@ function ProductList({ products }: { products: Product[] }) {
               <div className="metric"><strong>${product.retailPrice}</strong><span>Minorista</span></div>
               <div className="metric"><strong>{product.stockQuantity}</strong><span>Stock</span></div>
             </div>
+            <div className="actions"><button className="btn secondary" type="button" onClick={() => onEdit(product)}>Editar</button></div>
           </article>
         ))}
       </div>
       <div className="desktop-only table-wrap">
-        <table><thead><tr>{exportColumns.map(([, label]) => <th key={label}>{label}</th>)}</tr></thead><tbody>{products.map((p) => <tr key={p.id}>{exportColumns.map(([key]) => <td key={key}>{String((p as any)[key])}</td>)}</tr>)}</tbody></table>
+        <table><thead><tr>{exportColumns.map(([, label]) => <th key={label}>{label}</th>)}<th>acciones</th></tr></thead><tbody>{products.map((p) => <tr key={p.id}>{exportColumns.map(([key]) => <td key={key}>{String((p as any)[key])}</td>)}<td><button className="btn secondary" type="button" onClick={() => onEdit(p)}>Editar</button></td></tr>)}</tbody></table>
       </div>
     </section>
+  );
+}
+
+function EditProductModal({ form, setForm, onClose, onSave }: { form: any; setForm: (form: any) => void; onClose: () => void; onSave: (event: FormEvent) => void }) {
+  return (
+    <div className="modal-backdrop">
+      <form className="modal" onSubmit={onSave}>
+        <h2>Editar producto</h2>
+        <div className="grid two">
+          <label className="field"><span>Codigo</span><input className="input" required value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} /></label>
+          <label className="field"><span>Descripcion</span><input className="input" required value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></label>
+          <label className="field"><span>Categoria</span><input className="input" required value={form.categoryName} onChange={(e) => setForm({ ...form, categoryName: e.target.value })} /></label>
+          <label className="field"><span>Proveedor</span><input className="input" required value={form.providerName} onChange={(e) => setForm({ ...form, providerName: e.target.value })} /></label>
+          <label className="field"><span>Precio costo</span><input className="input" required type="number" min="0" step="0.01" value={form.costPrice} onChange={(e) => setForm({ ...form, costPrice: Number(e.target.value) })} /></label>
+          <label className="field"><span>Observaciones</span><textarea className="textarea" value={form.notes || ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></label>
+          <label className="checkbox-row"><input type="checkbox" checked={form.active} onChange={(e) => setForm({ ...form, active: e.target.checked })} /> Activo</label>
+        </div>
+        <div className="actions">
+          <button className="btn secondary" type="button" onClick={onClose}>Cancelar</button>
+          <button className="btn good">Guardar</button>
+        </div>
+      </form>
+    </div>
   );
 }
 

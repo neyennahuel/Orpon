@@ -156,7 +156,3 @@ public/brand/logo.png
 ```
 
 Ese mismo archivo se usa en la cabecera de la app y como icono PWA. Para cambiarlo, reemplazar ese archivo manteniendo el mismo nombre.
-
-## GitHub Pages
-
-GitHub Pages solo puede servir archivos estaticos. La URL `https://neyennahuel.github.io/Orpon/` puede mostrar la interfaz exportada, pero no puede ejecutar las APIs REST ni conectarse a PostgreSQL. Para usar el sistema completo hace falta desplegarlo en un hosting Node.js con base PostgreSQL, por ejemplo Vercel + Neon/Supabase/Railway.
