@@ -57,6 +57,28 @@ if errorlevel 1 (
 )
 
 echo.
+echo Verificando base PostgreSQL orpon_descartables...
+set "PGPASSWORD=Lolita00+"
+set "PSQL_EXE="
+if exist "C:\Program Files\PostgreSQL\17\bin\psql.exe" set "PSQL_EXE=C:\Program Files\PostgreSQL\17\bin\psql.exe"
+if not defined PSQL_EXE if exist "C:\Program Files\PostgreSQL\16\bin\psql.exe" set "PSQL_EXE=C:\Program Files\PostgreSQL\16\bin\psql.exe"
+if not defined PSQL_EXE if exist "C:\Program Files\PostgreSQL\15\bin\psql.exe" set "PSQL_EXE=C:\Program Files\PostgreSQL\15\bin\psql.exe"
+if not defined PSQL_EXE set "PSQL_EXE=psql"
+
+"%PSQL_EXE%" -U postgres -h localhost -p 5432 -d postgres -tc "SELECT 1 FROM pg_database WHERE datname = 'orpon_descartables';" | findstr /C:"1" >nul
+if errorlevel 1 (
+  echo Creando base orpon_descartables...
+  "%PSQL_EXE%" -U postgres -h localhost -p 5432 -d postgres -c "CREATE DATABASE orpon_descartables;"
+  if errorlevel 1 (
+    echo ERROR: no se pudo crear la base orpon_descartables.
+    pause
+    exit /b 1
+  )
+) else (
+  echo Base orpon_descartables encontrada.
+)
+
+echo.
 echo Aplicando migraciones de PostgreSQL...
 call npx prisma migrate deploy
 if errorlevel 1 (
