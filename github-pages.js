@@ -181,27 +181,33 @@ function importBase(file) {
     const summary = { created: 0, updated: 0, ignored: 0, errors: [] };
     if (!rows.length) return toast("El Excel no tiene filas");
     const headerMap = Object.fromEntries(Object.keys(rows[0]).map((key) => [normalizeHeader(key), key]));
-    const required = ["codigo_producto", "descripcion", "categoria", "proveedor", "precio_costo"];
+    const required = ["codigo_producto", "descripcion", "categoria"];
     const missing = required.filter((key) => !headerMap[key]);
     if (missing.length) return toast(`Faltan columnas: ${missing.join(", ")}`);
     rows.forEach((row, index) => {
       const code = String(row[headerMap.codigo_producto] || "").trim();
-      const costPrice = parsePrice(row[headerMap.precio_costo]);
-      if (!code || !row[headerMap.descripcion] || !row[headerMap.categoria] || !row[headerMap.proveedor] || costPrice === null) {
+      if (!code || !row[headerMap.descripcion] || !row[headerMap.categoria]) {
         summary.ignored++;
         summary.errors.push(`Fila ${index + 2}: datos invalidos`);
         return;
       }
       const existed = state.products.some((p) => p.code === code);
-      addProduct({
-        code,
-        description: row[headerMap.descripcion],
-        category: row[headerMap.categoria],
-        provider: row[headerMap.proveedor],
-        costPrice,
-        unitMeasure: headerMap.unidad_medida ? row[headerMap.unidad_medida] : "",
-        active: headerMap.activo ? !["false", "0", "no", "inactivo"].includes(String(row[headerMap.activo]).toLowerCase()) : true,
-      });
+      const existing = state.products.find((p) => p.code === code);
+      if (existing) {
+        existing.description = String(row[headerMap.descripcion]).trim();
+        existing.category = String(row[headerMap.categoria]).trim();
+      } else {
+        state.products.push({
+          code,
+          description: String(row[headerMap.descripcion]).trim(),
+          category: String(row[headerMap.categoria]).trim(),
+          provider: "Sin proveedor",
+          costPrice: 0,
+          unitMeasure: "",
+          active: true,
+          stockQuantity: 0,
+        });
+      }
       existed ? summary.updated++ : summary.created++;
     });
     saveState();
@@ -305,7 +311,7 @@ document.querySelectorAll(".tab").forEach((button) => button.onclick = () => {
 });
 
 document.getElementById("downloadTemplate").onclick = () => {
-  const rows = [{ codigo_producto: "COD-001", descripcion: "Vaso plastico 180cc", categoria: "Vasos", proveedor: "Proveedor ejemplo", precio_costo: 100, unidad_medida: "unidad", observaciones: "", activo: true }];
+  const rows = [{ codigo_producto: "COD-001", descripcion: "Vaso plastico 180cc", categoria: "Vasos" }];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "productos");
   XLSX.writeFile(wb, "plantilla-productos-orpon.xlsx");
