@@ -177,6 +177,61 @@ function addProduct(data) {
   else state.products.push(next);
 }
 
+function productMatches(query) {
+  const q = String(query || "").trim().toLowerCase();
+  if (!q) return [];
+  const score = (product) => {
+    const code = product.code.toLowerCase();
+    const description = product.description.toLowerCase();
+    if (code === q) return 0;
+    if (description === q) return 1;
+    if (code.startsWith(q)) return 2;
+    if (description.startsWith(q)) return 3;
+    return 4;
+  };
+  return state.products
+    .filter((product) => product.code.toLowerCase().includes(q) || product.description.toLowerCase().includes(q))
+    .sort((a, b) => score(a) - score(b) || a.code.localeCompare(b.code))
+    .slice(0, 8);
+}
+
+function renderProductSuggestions(field) {
+  const input = document.getElementById(field);
+  const box = document.getElementById(`${field}Suggestions`);
+  const products = productMatches(input.value);
+  if (!products.length) {
+    box.classList.add("hidden");
+    box.innerHTML = "";
+    return;
+  }
+  box.innerHTML = products.map((product) => `
+    <button type="button" class="suggestion" data-code="${escapeHtml(product.code)}">
+      <strong>${escapeHtml(product.code)}</strong>
+      <span>${escapeHtml(product.description)}</span>
+      <em>${escapeHtml(product.category)}</em>
+    </button>
+  `).join("");
+  box.querySelectorAll(".suggestion").forEach((button) => {
+    button.onmousedown = (event) => event.preventDefault();
+    button.onclick = () => selectExistingProduct(button.dataset.code);
+  });
+  box.classList.remove("hidden");
+}
+
+function selectExistingProduct(productCode) {
+  const product = state.products.find((row) => row.code === productCode);
+  if (!product) return;
+  code.value = product.code;
+  description.value = product.description;
+  category.value = product.category;
+  provider.value = product.provider;
+  costPrice.value = product.costPrice;
+  unitMeasure.value = product.unitMeasure || "";
+  active.checked = product.active;
+  document.getElementById("codeSuggestions").classList.add("hidden");
+  document.getElementById("descriptionSuggestions").classList.add("hidden");
+}
+
 function importBase(file) {
   const reader = new FileReader();
   reader.onload = () => {
@@ -323,6 +378,12 @@ document.getElementById("downloadTemplate").onclick = () => {
 document.getElementById("baseFile").onchange = (event) => importBase(event.target.files[0]);
 document.getElementById("costFile").onchange = (event) => previewCosts(event.target.files[0]);
 document.getElementById("stockSearch").oninput = renderStockSelect;
+["code", "description"].forEach((field) => {
+  const input = document.getElementById(field);
+  input.oninput = () => renderProductSuggestions(field);
+  input.onfocus = () => renderProductSuggestions(field);
+  input.onblur = () => setTimeout(() => document.getElementById(`${field}Suggestions`).classList.add("hidden"), 120);
+});
 document.getElementById("exportExcel").onclick = () => exportData("excel");
 document.getElementById("exportPdf").onclick = () => exportData("pdf");
 document.getElementById("saveSettings").onclick = () => {

@@ -101,8 +101,8 @@
           <div class="panel">
             <h2>Producto</h2>
             <form id="productForm" class="grid two">
-              <label class="field"><span>Codigo</span><input id="code" class="input" required /></label>
-              <label class="field"><span>Descripcion</span><input id="description" class="input" required /></label>
+              <label class="field autocomplete-field"><span>Codigo</span><input id="code" class="input" required /><div id="codeSuggestions" class="suggestions hidden"></div></label>
+              <label class="field autocomplete-field"><span>Descripcion</span><input id="description" class="input" required /><div id="descriptionSuggestions" class="suggestions hidden"></div></label>
               <label class="field"><span>Categoria</span><input id="category" class="input" required /></label>
               <label class="field"><span>Proveedor</span><input id="provider" class="input" required /></label>
               <label class="field"><span>Costo</span><input id="costPrice" class="input" type="number" min="0" step="0.01" required /></label>
