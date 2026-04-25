@@ -211,6 +211,7 @@ export default function Home() {
     <div className="app-shell">
       <header className="topbar">
         <div className="brand">
+          <img className="brand-logo" src="/brand/logo.png" alt="Orpon Descartables" />
           <div>
             <h1>Orpon Descartables</h1>
             <p>Gestion comercial</p>

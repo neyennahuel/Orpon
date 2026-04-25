@@ -2,9 +2,14 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://orpon.swhittall.com.ar"),
   title: "Orpon Descartables",
   description: "Gestion de productos, precios y stock",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/brand/logo.png",
+    apple: "/brand/logo.png",
+  },
 };
 
 export const viewport: Viewport = {

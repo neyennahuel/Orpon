@@ -130,6 +130,33 @@ npm run start
 
 Verificar que `DATABASE_URL` apunte a PostgreSQL de produccion antes de correr migraciones.
 
+## Servidor Windows
+
+Para levantar esta primera version en otra PC con Windows:
+
+1. Copiar el proyecto al servidor.
+2. Instalar Node.js LTS si la PC no lo tiene.
+3. Crear la base PostgreSQL `orpon_descartables`.
+4. Editar `.env` con el `DATABASE_URL` correcto.
+5. Ejecutar `iniciar-orpon.bat`.
+
+El BAT instala dependencias, genera Prisma Client, aplica migraciones, compila y levanta la app en:
+
+- `http://localhost:3005`
+- `https://orpon.swhittall.com.ar` cuando el DNS/proxy apunte al servidor
+
+La app escucha en `0.0.0.0:3005`.
+
+## Logo
+
+El logo se toma desde:
+
+```text
+public/brand/logo.png
+```
+
+Ese mismo archivo se usa en la cabecera de la app y como icono PWA. Para cambiarlo, reemplazar ese archivo manteniendo el mismo nombre.
+
 ## GitHub Pages
 
 GitHub Pages solo puede servir archivos estaticos. La URL `https://neyennahuel.github.io/Orpon/` puede mostrar la interfaz exportada, pero no puede ejecutar las APIs REST ni conectarse a PostgreSQL. Para usar el sistema completo hace falta desplegarlo en un hosting Node.js con base PostgreSQL, por ejemplo Vercel + Neon/Supabase/Railway.
