@@ -216,6 +216,16 @@ th { color: var(--muted); background: #fafafa; }
   gap: 10px;
   min-height: 40px;
 }
+.category-list {
+  display: grid;
+  gap: 10px;
+}
+.category-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  align-items: center;
+}
 .suggestions {
   position: absolute;
   top: calc(100% + 4px);
@@ -264,6 +274,7 @@ th { color: var(--muted); background: #fafafa; }
   .main { padding: 22px; }
   .grid.two { grid-template-columns: repeat(2, 1fr); }
   .summary { grid-template-columns: repeat(4, 1fr); }
+  .category-row { grid-template-columns: 1fr auto; }
   .desktop-only { display: block; }
   .mobile-only { display: none; }
   .modal-backdrop { place-items: center; }

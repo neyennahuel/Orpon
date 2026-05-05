@@ -30,6 +30,11 @@ type SettingsForm = {
   promo2Percentage: number;
 };
 
+type Category = {
+  id: number;
+  name: string;
+};
+
 const tabs = [
   ["lista", "Lista", Boxes],
   ["base", "Base", Upload],
@@ -56,6 +61,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<(typeof tabs)[number][0]>("lista");
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
+  const [categoryRows, setCategoryRows] = useState<Category[]>([]);
   const [providers, setProviders] = useState<string[]>([]);
   const [settings, setSettings] = useState<SettingsForm>({ wholesalePercentage: 0, retailPercentage: 0, promo1Percentage: 0, promo2Percentage: 0 });
   const [filters, setFilters] = useState({ q: "", category: "", provider: "", active: "" });
@@ -73,6 +79,7 @@ export default function Home() {
     Object.fromEntries(exportColumns.map(([key, , selected]) => [key, selected])),
   );
   const [productForm, setProductForm] = useState({ code: "", description: "", categoryName: "", providerName: "", costPrice: 0, unitMeasure: "", notes: "", active: true });
+  const [categoryDrafts, setCategoryDrafts] = useState<Record<number, string>>({});
   const [stockForm, setStockForm] = useState({ productId: "", movementType: "entrada", quantity: 1, reason: "", notes: "" });
   const [stockMovements, setStockMovements] = useState<any[]>([]);
 
@@ -90,7 +97,10 @@ export default function Home() {
       fetch("/api/stock/movements"),
     ]);
     setProducts(await productRes.json());
-    setCategories((await categoryRes.json()).map((row: any) => row.name));
+    const loadedCategories = await categoryRes.json();
+    setCategoryRows(loadedCategories);
+    setCategories(loadedCategories.map((row: any) => row.name));
+    setCategoryDrafts(Object.fromEntries(loadedCategories.map((row: any) => [row.id, row.name])));
     setProviders((await providerRes.json()).map((row: any) => row.name));
     const rawSettings = await settingsRes.json();
     setSettings({
@@ -174,6 +184,19 @@ export default function Home() {
     if (!res.ok) return notify("Revisar datos del producto");
     setProductForm({ code: "", description: "", categoryName: "", providerName: "", costPrice: 0, unitMeasure: "", notes: "", active: true });
     notify("Producto guardado");
+    await loadAll();
+  }
+
+  async function saveCategory(category: Category) {
+    const name = (categoryDrafts[category.id] || "").trim();
+    if (!name) return notify("Nombre de categoria obligatorio");
+    const res = await fetch(`/api/categories/${category.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    if (!res.ok) return notify("No se pudo guardar la categoria");
+    notify("Categoria actualizada");
     await loadAll();
   }
 
@@ -367,21 +390,34 @@ export default function Home() {
         )}
 
         {activeTab === "productos" && (
-          <section className="panel">
-            <h2>Producto</h2>
-            <form className="grid two" onSubmit={saveProduct}>
-              <label className="field"><span>Codigo</span><input className="input" required value={productForm.code} onChange={(e) => setProductForm({ ...productForm, code: e.target.value })} /></label>
-              <label className="field"><span>Descripcion</span><input className="input" required value={productForm.description} onChange={(e) => setProductForm({ ...productForm, description: e.target.value })} /></label>
-              <label className="field"><span>Categoria</span><input className="input" required list="categories" value={productForm.categoryName} onChange={(e) => setProductForm({ ...productForm, categoryName: e.target.value })} /></label>
-              <label className="field"><span>Proveedor</span><input className="input" required list="providers" value={productForm.providerName} onChange={(e) => setProductForm({ ...productForm, providerName: e.target.value })} /></label>
-              <label className="field"><span>Costo</span><input className="input" required type="number" min="0" step="0.01" value={productForm.costPrice} onChange={(e) => setProductForm({ ...productForm, costPrice: Number(e.target.value) })} /></label>
-              <label className="field"><span>Unidad</span><input className="input" value={productForm.unitMeasure} onChange={(e) => setProductForm({ ...productForm, unitMeasure: e.target.value })} /></label>
-              <label className="checkbox-row"><input type="checkbox" checked={productForm.active} onChange={(e) => setProductForm({ ...productForm, active: e.target.checked })} /> Activo</label>
-              <div className="actions"><button className="btn good">Guardar producto</button></div>
-            </form>
-            <datalist id="categories">{categories.map((name) => <option key={name} value={name} />)}</datalist>
-            <datalist id="providers">{providers.map((name) => <option key={name} value={name} />)}</datalist>
-          </section>
+          <>
+            <section className="panel">
+              <h2>Producto</h2>
+              <form className="grid two" onSubmit={saveProduct}>
+                <label className="field"><span>Codigo</span><input className="input" required value={productForm.code} onChange={(e) => setProductForm({ ...productForm, code: e.target.value })} /></label>
+                <label className="field"><span>Descripcion</span><input className="input" required value={productForm.description} onChange={(e) => setProductForm({ ...productForm, description: e.target.value })} /></label>
+                <label className="field"><span>Categoria</span><input className="input" required list="categories" value={productForm.categoryName} onChange={(e) => setProductForm({ ...productForm, categoryName: e.target.value })} /></label>
+                <label className="field"><span>Proveedor</span><input className="input" required list="providers" value={productForm.providerName} onChange={(e) => setProductForm({ ...productForm, providerName: e.target.value })} /></label>
+                <label className="field"><span>Costo</span><input className="input" required type="number" min="0" step="0.01" value={productForm.costPrice} onChange={(e) => setProductForm({ ...productForm, costPrice: Number(e.target.value) })} /></label>
+                <label className="field"><span>Unidad</span><input className="input" value={productForm.unitMeasure} onChange={(e) => setProductForm({ ...productForm, unitMeasure: e.target.value })} /></label>
+                <label className="checkbox-row"><input type="checkbox" checked={productForm.active} onChange={(e) => setProductForm({ ...productForm, active: e.target.checked })} /> Activo</label>
+                <div className="actions"><button className="btn good">Guardar producto</button></div>
+              </form>
+              <datalist id="categories">{categories.map((name) => <option key={name} value={name} />)}</datalist>
+              <datalist id="providers">{providers.map((name) => <option key={name} value={name} />)}</datalist>
+            </section>
+            <section className="panel">
+              <h2>Categorias</h2>
+              <div className="category-list">
+                {categoryRows.length ? categoryRows.map((category) => (
+                  <div className="category-row" key={category.id}>
+                    <input className="input" value={categoryDrafts[category.id] ?? category.name} onChange={(e) => setCategoryDrafts({ ...categoryDrafts, [category.id]: e.target.value })} />
+                    <button className="btn good" type="button" onClick={() => saveCategory(category)}>Guardar</button>
+                  </div>
+                )) : <p className="muted">Sin categorias cargadas.</p>}
+              </div>
+            </section>
+          </>
         )}
       </main>
       {showExport && <ExportModal selectedColumns={selectedColumns} setSelectedColumns={setSelectedColumns} onClose={() => setShowExport(null)} onConfirm={showExport === "excel" ? exportExcel : exportPdf} />}
