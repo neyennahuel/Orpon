@@ -139,6 +139,20 @@ export default function Home() {
     await loadAll();
   }
 
+  async function clearProductsBase() {
+    const firstConfirm = confirm("Esto elimina todos los productos, stock, movimientos e historial de costos de la base de datos. Continuar?");
+    if (!firstConfirm) return;
+    const confirmationText = prompt('Para confirmar escribi "ELIMINAR"');
+    if (confirmationText !== "ELIMINAR") return notify("Borrado cancelado");
+
+    const res = await fetch("/api/products/clear", { method: "DELETE" });
+    if (!res.ok) return notify("No se pudo eliminar la base");
+    const result = await res.json();
+    setBaseSummary(null);
+    notify(`Productos eliminados: ${result.products ?? 0}`);
+    await loadAll();
+  }
+
   async function previewCosts(file: File | null) {
     if (!file) return;
     setCostFile(file);
@@ -330,15 +344,24 @@ export default function Home() {
         )}
 
         {activeTab === "base" && (
-          <section className="panel">
-            <h2>Carga de base</h2>
-            <div className="actions">
-              <a className="btn secondary" href="/api/imports/template">Descargar plantilla</a>
-              <label className="btn"><Upload size={18} /> Importar Excel<input hidden type="file" accept=".xlsx,.xls" onChange={(e) => uploadBase(e.target.files?.[0] || null)} /></label>
-            </div>
-            {baseSummary && <Summary data={{ creados: baseSummary.created, actualizados: baseSummary.updated, ignorados: baseSummary.ignored, errores: baseSummary.errors?.length || 0 }} />}
-            {baseSummary?.errors?.length ? <ErrorList errors={baseSummary.errors} /> : null}
-          </section>
+          <>
+            <section className="panel">
+              <h2>Carga de base</h2>
+              <div className="actions">
+                <a className="btn secondary" href="/api/imports/template">Descargar plantilla</a>
+                <label className="btn"><Upload size={18} /> Importar Excel<input hidden type="file" accept=".xlsx,.xls" onChange={(e) => uploadBase(e.target.files?.[0] || null)} /></label>
+              </div>
+              {baseSummary && <Summary data={{ creados: baseSummary.created, actualizados: baseSummary.updated, ignorados: baseSummary.ignored, errores: baseSummary.errors?.length || 0 }} />}
+              {baseSummary?.errors?.length ? <ErrorList errors={baseSummary.errors} /> : null}
+            </section>
+            <section className="panel danger-panel">
+              <h2>Eliminar base de productos</h2>
+              <p className="muted">Borra definitivamente productos, stock, movimientos e historial de costos en PostgreSQL.</p>
+              <div className="actions">
+                <button className="btn danger" type="button" onClick={clearProductsBase}>Eliminar toda la base</button>
+              </div>
+            </section>
+          </>
         )}
 
         {activeTab === "costos" && (

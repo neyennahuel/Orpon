@@ -89,6 +89,10 @@ button {
   padding: 14px;
   margin-bottom: 14px;
 }
+.danger-panel {
+  border-color: #f0b7b7;
+  background: #fffafa;
+}
 .panel h2, .panel h3 { margin: 0 0 12px; font-size: 18px; }
 .grid {
   display: grid;
